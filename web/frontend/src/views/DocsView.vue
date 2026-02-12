@@ -1,7 +1,6 @@
 <template>
   <section class="panel">
     <h2>文档中心</h2>
-    <p class="muted">支持直接编辑前端内的 Markdown 文件并实时展示。</p>
 
     <div class="selector-row">
       <button
