@@ -1,7 +1,14 @@
 {
   "server": {
     "port": 18080,
-    "threads": 4
+    "threads": 4,
+    "http_enabled": true,
+    "https_enabled": false,
+    "https_port": 18443,
+    "bind_address": "0.0.0.0",
+    "ssl_cert_file": "./certs/server.crt",
+    "ssl_key_file": "./certs/server.key",
+    "ssl_use_chain_file": false
   },
   "game": {
     "map_width": 50,

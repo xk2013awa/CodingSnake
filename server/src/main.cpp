@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <memory>
+#include <future>
 
 #include "models/Config.h"
 #include "managers/GameManager.h"
@@ -86,31 +87,104 @@ int main(int argc, char* argv[]) {
         leaderboardManager
     );
 
-    // 创建并配置 Crow 应用（启用CORS支持）
-    crow::App<crow::CORSHandler> app;
-    
-    // 配置CORS，允许所有来源
-    auto& cors = app.get_middleware<crow::CORSHandler>();
-    cors.global()
-        .origin("*")
-        .methods("GET"_method, "POST"_method, "OPTIONS"_method)
-        .headers("Content-Type", "Accept");
-    
-    // 注册所有路由
-    routeHandler->registerRoutes(app);
+    const auto& serverConfig = config.getServer();
+    crow::App<crow::CORSHandler> httpApp;
+    crow::App<crow::CORSHandler> httpsApp;
+
+    auto setupCors = [](crow::App<crow::CORSHandler>& app) {
+        auto& cors = app.get_middleware<crow::CORSHandler>();
+        cors.global()
+            .origin("*")
+            .methods("GET"_method, "POST"_method, "OPTIONS"_method)
+            .headers("Content-Type", "Accept");
+    };
+
+    if (serverConfig.httpEnabled) {
+        setupCors(httpApp);
+        routeHandler->registerRoutes(httpApp);
+    }
+    if (serverConfig.httpsEnabled) {
+        setupCors(httpsApp);
+        routeHandler->registerRoutes(httpsApp);
+    }
 
     // 启动游戏循环
     gameManager->start();
     LOG_INFO("Game loop started");
 
-    // 启动 HTTP 服务器
-    const int port = config.getServer().port;
-    const int threads = config.getServer().threads;
-    
-    LOG_INFO("Server starting on port " + std::to_string(port) + 
-             " with " + std::to_string(threads) + " threads...");
-    
-    app.port(port).multithreaded().concurrency(threads).run();
+    const int threads = serverConfig.threads;
+
+    try {
+        if (serverConfig.httpEnabled && serverConfig.httpsEnabled) {
+            LOG_INFO("Server starting with dual stack, HTTP=" + std::to_string(serverConfig.port) +
+                     ", HTTPS=" + std::to_string(serverConfig.httpsPort) +
+                     ", bind=" + serverConfig.bindAddress +
+                     ", threads=" + std::to_string(threads));
+
+#ifdef CROW_ENABLE_SSL
+            if (serverConfig.sslUseChainFile) {
+                httpsApp.bindaddr(serverConfig.bindAddress)
+                    .port(static_cast<std::uint16_t>(serverConfig.httpsPort))
+                    .concurrency(threads)
+                    .ssl_chainfile(serverConfig.sslCertFile, serverConfig.sslKeyFile);
+            } else {
+                httpsApp.bindaddr(serverConfig.bindAddress)
+                    .port(static_cast<std::uint16_t>(serverConfig.httpsPort))
+                    .concurrency(threads)
+                    .ssl_file(serverConfig.sslCertFile, serverConfig.sslKeyFile);
+            }
+            auto httpsFuture = httpsApp.run_async();
+
+            httpApp.bindaddr(serverConfig.bindAddress)
+                .port(static_cast<std::uint16_t>(serverConfig.port))
+                .concurrency(threads)
+                .run();
+
+            httpsApp.stop();
+            httpsFuture.get();
+#else
+            LOG_ERROR("Crow was built without SSL support, cannot enable HTTPS");
+            return 1;
+#endif
+        } else if (serverConfig.httpEnabled) {
+            LOG_INFO("Server starting HTTP on " + serverConfig.bindAddress + ":" +
+                     std::to_string(serverConfig.port) +
+                     " with " + std::to_string(threads) + " threads...");
+
+            httpApp.bindaddr(serverConfig.bindAddress)
+                .port(static_cast<std::uint16_t>(serverConfig.port))
+                .concurrency(threads)
+                .run();
+        } else {
+            LOG_INFO("Server starting HTTPS on " + serverConfig.bindAddress + ":" +
+                     std::to_string(serverConfig.httpsPort) +
+                     " with " + std::to_string(threads) + " threads...");
+
+#ifdef CROW_ENABLE_SSL
+            if (serverConfig.sslUseChainFile) {
+                httpsApp.bindaddr(serverConfig.bindAddress)
+                    .port(static_cast<std::uint16_t>(serverConfig.httpsPort))
+                    .concurrency(threads)
+                    .ssl_chainfile(serverConfig.sslCertFile, serverConfig.sslKeyFile)
+                    .run();
+            } else {
+                httpsApp.bindaddr(serverConfig.bindAddress)
+                    .port(static_cast<std::uint16_t>(serverConfig.httpsPort))
+                    .concurrency(threads)
+                    .ssl_file(serverConfig.sslCertFile, serverConfig.sslKeyFile)
+                    .run();
+            }
+#else
+            LOG_ERROR("Crow was built without SSL support, cannot enable HTTPS");
+            return 1;
+#endif
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR(std::string("Server failed to start: ") + e.what());
+        gameManager->stop();
+        PerformanceMonitor::getInstance().stop();
+        return 1;
+    }
 
     // 关闭游戏循环
     gameManager->stop();

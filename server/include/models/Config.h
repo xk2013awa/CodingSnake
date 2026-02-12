@@ -14,6 +14,13 @@ public:
     struct ServerConfig {
         int port = 18080;
         int threads = 4;
+        bool httpEnabled = true;
+        bool httpsEnabled = false;
+        int httpsPort = 18443;
+        std::string bindAddress = "0.0.0.0";
+        std::string sslCertFile;
+        std::string sslKeyFile;
+        bool sslUseChainFile = false;
     };
 
     struct GameConfig {

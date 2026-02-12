@@ -102,8 +102,15 @@ make
 ```json
 {
   "server": {
-    "port": 18080,        // 监听端口
-    "threads": 4          // 线程数
+    "port": 18080,                    // HTTP 端口（兼容旧配置）
+    "threads": 4,                     // 线程数
+    "http_enabled": true,             // 是否启用 HTTP
+    "https_enabled": false,           // 是否启用 HTTPS
+    "https_port": 18443,              // HTTPS 端口
+    "bind_address": "0.0.0.0",      // 监听地址
+    "ssl_cert_file": "./certs/server.crt", // 证书文件
+    "ssl_key_file": "./certs/server.key",  // 私钥文件
+    "ssl_use_chain_file": false       // 是否按证书链方式加载
   },
   "game": {
     "map_width": 50,              // 地图宽度
@@ -128,6 +135,22 @@ make
   }
 }
 ```
+
+### HTTPS 证书（本地开发）
+
+```bash
+mkdir -p certs
+openssl req -x509 -newkey rsa:2048 -sha256 -days 365 -nodes \
+  -keyout certs/server.key -out certs/server.crt \
+  -subj "/CN=localhost"
+```
+
+然后在 `config.json` 中设置：
+- `https_enabled: true`
+- `ssl_cert_file: "./certs/server.crt"`
+- `ssl_key_file: "./certs/server.key"`
+
+如需同时兼容 HTTP 与 HTTPS，保持 `http_enabled: true` 即可。
 
 ## API 文档
 

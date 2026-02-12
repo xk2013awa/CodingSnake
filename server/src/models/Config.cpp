@@ -57,6 +57,27 @@ bool Config::loadFromJson(const nlohmann::json& j) {
             if (server.contains("threads")) {
                 server_.threads = server["threads"].get<int>();
             }
+            if (server.contains("http_enabled")) {
+                server_.httpEnabled = server["http_enabled"].get<bool>();
+            }
+            if (server.contains("https_enabled")) {
+                server_.httpsEnabled = server["https_enabled"].get<bool>();
+            }
+            if (server.contains("https_port")) {
+                server_.httpsPort = server["https_port"].get<int>();
+            }
+            if (server.contains("bind_address")) {
+                server_.bindAddress = server["bind_address"].get<std::string>();
+            }
+            if (server.contains("ssl_cert_file")) {
+                server_.sslCertFile = server["ssl_cert_file"].get<std::string>();
+            }
+            if (server.contains("ssl_key_file")) {
+                server_.sslKeyFile = server["ssl_key_file"].get<std::string>();
+            }
+            if (server.contains("ssl_use_chain_file")) {
+                server_.sslUseChainFile = server["ssl_use_chain_file"].get<bool>();
+            }
         }
 
         // 加载游戏配置
@@ -214,12 +235,40 @@ bool Config::loadFromJson(const nlohmann::json& j) {
  */
 bool Config::validate() const {
     // 验证服务器配置
-    if (server_.port < 1024 || server_.port > 65535) {
-        std::cerr << "[Config] 端口号无效: " << server_.port << " (应在 1024-65535 之间)" << std::endl;
+    if (!server_.httpEnabled && !server_.httpsEnabled) {
+        std::cerr << "[Config] server.http_enabled 与 server.https_enabled 不能同时为 false" << std::endl;
         return false;
     }
     if (server_.threads < 1 || server_.threads > 128) {
         std::cerr << "[Config] 线程数无效: " << server_.threads << " (应在 1-128 之间)" << std::endl;
+        return false;
+    }
+    if (server_.httpEnabled) {
+        if (server_.port < 1024 || server_.port > 65535) {
+            std::cerr << "[Config] HTTP 端口号无效: " << server_.port << " (应在 1024-65535 之间)" << std::endl;
+            return false;
+        }
+    }
+    if (server_.httpsEnabled) {
+        if (server_.httpsPort < 1024 || server_.httpsPort > 65535) {
+            std::cerr << "[Config] HTTPS 端口号无效: " << server_.httpsPort << " (应在 1024-65535 之间)" << std::endl;
+            return false;
+        }
+        if (server_.sslCertFile.empty()) {
+            std::cerr << "[Config] 启用 HTTPS 时 ssl_cert_file 不能为空" << std::endl;
+            return false;
+        }
+        if (server_.sslKeyFile.empty()) {
+            std::cerr << "[Config] 启用 HTTPS 时 ssl_key_file 不能为空" << std::endl;
+            return false;
+        }
+    }
+    if (server_.httpEnabled && server_.httpsEnabled && server_.port == server_.httpsPort) {
+        std::cerr << "[Config] HTTP 与 HTTPS 端口不能相同: " << server_.port << std::endl;
+        return false;
+    }
+    if (server_.bindAddress.empty()) {
+        std::cerr << "[Config] bind_address 不能为空" << std::endl;
         return false;
     }
 
