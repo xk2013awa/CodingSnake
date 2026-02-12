@@ -12,22 +12,35 @@ find_package(OpenSSL REQUIRED)
 
 # Include FetchContent for dependencies
 include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
 
-# Crow web framework
-FetchContent_Declare(
-    crow
-    GIT_REPOSITORY https://github.com/CrowCpp/Crow.git
-    GIT_TAG master
-)
-FetchContent_MakeAvailable(crow)
+# Crow web framework - try find_package first, then FetchContent
+find_package(Crow QUIET)
+if(NOT Crow_FOUND)
+    message(STATUS "Crow not found locally, downloading from GitHub...")
+    FetchContent_Declare(
+        crow
+        GIT_REPOSITORY https://github.com/CrowCpp/Crow.git
+        GIT_TAG master
+    )
+    FetchContent_MakeAvailable(crow)
+else()
+    message(STATUS "Found Crow locally")
+endif()
 
-# nlohmann/json
-FetchContent_Declare(
-    json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
-)
-FetchContent_MakeAvailable(json)
+# nlohmann/json - try find_package first, then FetchContent
+find_package(nlohmann_json QUIET)
+if(NOT nlohmann_json_FOUND)
+    message(STATUS "nlohmann_json not found locally, downloading from GitHub...")
+    FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+    )
+    FetchContent_MakeAvailable(json)
+else()
+    message(STATUS "Found nlohmann_json locally")
+endif()
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
