@@ -6,6 +6,7 @@ on:
       - main  # 或者是你的主分支名
     paths:
       - 'web/frontend/**' # 只有当这个目录下的文件变动时才触发
+      - '.github/workflows/deploy-web.yml'
 
 permissions:
   contents: write
@@ -28,6 +29,8 @@ jobs:
 
       - name: Build
         working-directory: web/frontend
+        env:
+          VITE_BASE_PATH: /
         run: npm run build
 
       - name: Deploy to GitHub Pages
@@ -35,3 +38,4 @@ jobs:
         with:
           folder: web/frontend/dist # Vue build 生成的静态文件目录
           branch: gh-pages # 部署到的目标分支
+          cname: codingsnake.seveoi.icu

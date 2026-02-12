@@ -3,8 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
-const repositoryName = process.env.GITHUB_REPOSITORY?.split('/')[1]
-const defaultBasePath = repositoryName ? `/${repositoryName}/` : '/'
+const defaultBasePath = '/'
 
 // https://vite.dev/config/
 export default defineConfig({
