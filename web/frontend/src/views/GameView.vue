@@ -139,7 +139,6 @@
             <select v-model="leaderboardType">
               <option value="kd">K/D</option>
               <option value="max_length">最大长度</option>
-              <option value="avg_length_per_game">平均每局长度</option>
             </select>
             <select v-model="leaderboardRange">
               <option value="all">全部时间</option>
@@ -163,7 +162,7 @@
                   {{ entry.name }}
                   <span v-if="entry.isMe" class="me-badge">我</span>
                 </div>
-                <div class="meta">K/D {{ formatMetric(entry.kd) }} | 均长 {{ formatMetric(entry.avg_length_per_game) }} | 最长 {{ entry.max_length }}</div>
+                <div class="meta">K/D {{ formatMetric(entry.kd) }} | 最长 {{ entry.max_length }}</div>
               </div>
               <span class="value">{{ leaderboardValue(entry) }}</span>
             </button>
@@ -283,7 +282,7 @@ const tooltipPos = reactive({ x: 0, y: 0 })    // 悬浮提示屏幕位置
 const cameraInited = ref(false) // 相机是否已初始化
 
 // 排行榜筛选
-const leaderboardType = ref<'kd' | 'max_length' | 'avg_length_per_game'>('kd')
+const leaderboardType = ref<'kd' | 'max_length'>('kd')
 const leaderboardRange = ref<'all' | '1h' | '24h'>('all')
 
 type DisplayLeaderboardEntry = LeaderboardEntry & {
@@ -421,9 +420,6 @@ const getSortMetric = (entry: LeaderboardEntry) => {
   if (leaderboardType.value === 'max_length') {
     return toFiniteNumber(entry.max_length)
   }
-  if (leaderboardType.value === 'avg_length_per_game') {
-    return getEntryAvgLength(entry)
-  }
   return getEntryKd(entry)
 }
 
@@ -468,9 +464,6 @@ const formatMetric = (value: number) => {
 const leaderboardValue = (entry: DisplayLeaderboardEntry) => {
   if (leaderboardType.value === 'max_length') {
     return entry.max_length
-  }
-  if (leaderboardType.value === 'avg_length_per_game') {
-    return formatMetric(entry.avg_length_per_game)
   }
   return formatMetric(entry.kd)
 }
