@@ -8,7 +8,7 @@
             <p class="muted">展示当前对局画面与玩家动态。</p>
           </div>
           <div class="server-input">
-            <input v-model="serverUrl" placeholder="http://192.168.6.134:18080" />
+            <input v-model="serverUrl" :placeholder="DEFAULT_SERVER_URL" />
             <button type="button" :disabled="connecting" @click="handleConnect">
               {{ connected ? '已连接' : connecting ? '连接中...' : '连接' }}
             </button>
@@ -238,12 +238,13 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import http, { api } from '@/api'
+import { DEFAULT_SERVER_URL } from '@/constants'
 import { useGameStore } from '@/stores/game'
 import { useLeaderboardStore } from '@/stores/leaderboard'
 import { useViewerStore } from '@/stores/viewer'
 import type { LeaderboardEntry, Point, Player } from '@/types'
 
-const serverUrl = ref('http://192.168.6.134:18080')
+const serverUrl = ref(DEFAULT_SERVER_URL)
 
 const viewerStore = useViewerStore()
 const gameStore = useGameStore()

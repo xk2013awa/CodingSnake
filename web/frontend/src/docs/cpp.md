@@ -10,7 +10,7 @@
 
 要开始编程，你首先需要 `CodingSnake.hpp` 这个文件。
 
-[点击这里下载 `CodingSnake.hpp`](link)
+[点击这里下载 `CodingSnake.hpp`](https://seve42.github.io/CodingSnake/adapter/release/CodingSnake.hpp)
 
 想要加入游戏，你还需要一个账号。我们目前使用luogu帐号来辅助验证。用你的账号创建一个云剪贴板，内容仅包含`CodingSnake2026`，然后将链接`https://www.luogu.com.cn/paste/xxxxxx`中的`xxxxxx`部分复制下来，这就是你的paste。
 
