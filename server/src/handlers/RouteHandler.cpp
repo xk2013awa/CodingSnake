@@ -376,7 +376,7 @@ crow::response RouteHandler::handleLeaderboard(const crow::request& req) {
     try {
         PerformanceMonitor::ScopedRequest metricsGuard("leaderboard");
         const auto& leaderboardConfig = Config::getInstance().getLeaderboard();
-        std::string typeStr = "kills";
+        std::string typeStr = "kd";
         int limit = std::min(50, leaderboardConfig.maxEntries);
         int offset = 0;
         long long startTime = 0;
@@ -438,10 +438,12 @@ crow::response RouteHandler::handleLeaderboard(const crow::request& req) {
             return static_cast<char>(std::tolower(c));
         });
 
-        LeaderboardType type = LeaderboardType::KILLS;
+        LeaderboardType type = LeaderboardType::KD;
         if (typeStr == "max_length") {
             type = LeaderboardType::MAX_LENGTH;
-        } else if (typeStr != "kills") {
+        } else if (typeStr == "avg_length_per_game") {
+            type = LeaderboardType::AVG_LENGTH_PER_GAME;
+        } else if (typeStr != "kd") {
             return buildResponse(ResponseBuilder::badRequest("invalid type"));
         }
 
@@ -459,6 +461,13 @@ crow::response RouteHandler::handleLeaderboard(const crow::request& req) {
 
         nlohmann::json entryList = nlohmann::json::array();
         for (const auto& entry : entries) {
+            const double kd = entry.deaths > 0
+                ? static_cast<double>(entry.kills) / static_cast<double>(entry.deaths)
+                : static_cast<double>(entry.kills);
+            const double avgLengthPerGame = entry.gamesPlayed > 0
+                ? 3.0 + static_cast<double>(entry.totalFood) / static_cast<double>(entry.gamesPlayed)
+                : 0.0;
+
             entryList.push_back({
                 {"uid", entry.uid},
                 {"name", entry.playerName},
@@ -467,7 +476,9 @@ crow::response RouteHandler::handleLeaderboard(const crow::request& req) {
                 {"max_length", entry.maxLength},
                 {"kills", entry.kills},
                 {"deaths", entry.deaths},
+                {"kd", kd},
                 {"games_played", entry.gamesPlayed},
+                {"avg_length_per_game", avgLengthPerGame},
                 {"total_food", entry.totalFood},
                 {"last_round", entry.lastRound},
                 {"timestamp", entry.timestamp},

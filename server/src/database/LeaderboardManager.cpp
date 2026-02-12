@@ -31,7 +31,7 @@ bool LeaderboardManager::updateOnDeath(const std::string& uid,
                                        int round,
                                        int finalLength) {
     PlayerStats delta;
-    return applyDelta(uid, playerName, round, delta, finalLength, 0, 1);
+    return applyDelta(uid, playerName, round, delta, finalLength, 1, 1);
 }
 
 bool LeaderboardManager::updateOnGameEnd(const std::string& uid,
@@ -114,12 +114,16 @@ bool LeaderboardManager::addFood(const std::string& uid, int count) {
     });
 }
 
-std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayersByKills(int limit, int offset) {
-    return getTopPlayers(LeaderboardType::KILLS, limit, offset, 0, 0);
+std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayersByKD(int limit, int offset) {
+    return getTopPlayers(LeaderboardType::KD, limit, offset, 0, 0);
 }
 
 std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayersByMaxLength(int limit, int offset) {
     return getTopPlayers(LeaderboardType::MAX_LENGTH, limit, offset, 0, 0);
+}
+
+std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayersByAvgLengthPerGame(int limit, int offset) {
+    return getTopPlayers(LeaderboardType::AVG_LENGTH_PER_GAME, limit, offset, 0, 0);
 }
 
 std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayers(LeaderboardType type,
@@ -135,16 +139,23 @@ std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayers(LeaderboardType 
         offset = 0;
     }
 
-    std::string orderColumn = "kills";
+    std::string orderExpr =
+        "CASE WHEN deaths > 0 THEN CAST(kills AS REAL) / deaths ELSE CAST(kills AS REAL) END";
     switch (type) {
-        case LeaderboardType::KILLS:
-            orderColumn = "kills";
+        case LeaderboardType::KD:
+            orderExpr =
+                "CASE WHEN deaths > 0 THEN CAST(kills AS REAL) / deaths ELSE CAST(kills AS REAL) END";
             break;
         case LeaderboardType::MAX_LENGTH:
-            orderColumn = "max_length";
+            orderExpr = "max_length";
+            break;
+        case LeaderboardType::AVG_LENGTH_PER_GAME:
+            orderExpr =
+                "CASE WHEN games_played > 0 THEN 3.0 + CAST(total_food AS REAL) / games_played ELSE 0 END";
             break;
         default:
-            orderColumn = "kills";
+            orderExpr =
+                "CASE WHEN deaths > 0 THEN CAST(kills AS REAL) / deaths ELSE CAST(kills AS REAL) END";
             break;
     }
 
@@ -165,7 +176,7 @@ std::vector<LeaderboardEntry> LeaderboardManager::getTopPlayers(LeaderboardType 
         params.push_back(std::to_string(endTimestamp));
     }
 
-    sql += " ORDER BY " + orderColumn + " DESC, timestamp ASC LIMIT ? OFFSET ?";
+    sql += " ORDER BY " + orderExpr + " DESC, timestamp ASC LIMIT ? OFFSET ?";
     params.push_back(std::to_string(limit));
     params.push_back(std::to_string(offset));
 

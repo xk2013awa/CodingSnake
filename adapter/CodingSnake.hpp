@@ -374,6 +374,9 @@ private:
     
     int round_time_ms_;         // Round duration (ms)
     int last_full_refresh_;     // Round number of last full refresh
+    long long server_clock_offset_ms_; // server_time - local_time
+    bool has_clock_sync_;       // Whether clock offset has been calibrated
+    int best_clock_sync_rtt_ms_;// Best RTT observed for sync samples
     
     bool initialized_;          // Whether initialized
     bool in_game_;              // Whether currently in game
@@ -388,7 +391,8 @@ public:
      */
     explicit CodingSnake(const string& url) 
         : config_(url), round_time_ms_(1000), last_full_refresh_(0),
-          initialized_(false), in_game_(false) {
+                    server_clock_offset_ms_(0), has_clock_sync_(false), best_clock_sync_rtt_ms_(1 << 30),
+                    initialized_(false), in_game_(false) {
         initHttpClient();
     }
     
@@ -398,7 +402,8 @@ public:
      */
     explicit CodingSnake(const SnakeConfig& config)
         : config_(config), round_time_ms_(1000), last_full_refresh_(0),
-          initialized_(false), in_game_(false) {
+                    server_clock_offset_ms_(0), has_clock_sync_(false), best_clock_sync_rtt_ms_(1 << 30),
+                    initialized_(false), in_game_(false) {
         initHttpClient();
     }
     
@@ -563,9 +568,11 @@ private:
             {"color", player_color_}
         };
         
+        const long long request_start_ms = currentSystemTimeMs();
         auto res = client_->Post("/api/game/join",
                                   payload.dump(),
                                   "application/json");
+        const long long response_recv_ms = currentSystemTimeMs();
         
         if (!res) {
             throw SnakeException("Join game failed: network error");
@@ -583,6 +590,10 @@ private:
         
         // Initialize map state
         if (data["data"].contains("map_state")) {
+            const auto& map_state = data["data"]["map_state"];
+            if (map_state.contains("timestamp")) {
+                updateClockOffset(map_state["timestamp"].get<long long>(), request_start_ms, response_recv_ms);
+            }
             parseFullMapState(data["data"]["map_state"]);
             last_full_refresh_ = state_.getCurrentRound();
         }
@@ -633,7 +644,9 @@ private:
     * @brief Fetch full map.
      */
     bool fetchFullMap() {
+        const long long request_start_ms = currentSystemTimeMs();
         auto res = client_->Get("/api/game/map");
+        const long long response_recv_ms = currentSystemTimeMs();
         
         if (!res || res->status != 200) {
             return false;
@@ -643,6 +656,11 @@ private:
         
         if (data["code"].get<int>() != 0) {
             return false;
+        }
+
+        const auto& map_state = data["data"]["map_state"];
+        if (map_state.contains("timestamp")) {
+            updateClockOffset(map_state["timestamp"].get<long long>(), request_start_ms, response_recv_ms);
         }
         
         parseFullMapState(data["data"]["map_state"]);
@@ -655,7 +673,9 @@ private:
     * @brief Fetch delta map.
      */
     bool fetchDeltaMap() {
+        const long long request_start_ms = currentSystemTimeMs();
         auto res = client_->Get("/api/game/map/delta");
+        const long long response_recv_ms = currentSystemTimeMs();
         
         if (!res || res->status != 200) {
             return fetchFullMap();  // Fallback to full map on failure
@@ -666,10 +686,62 @@ private:
         if (data["code"].get<int>() != 0) {
             return fetchFullMap();
         }
+
+        const auto& delta_state = data["data"]["delta_state"];
+        if (delta_state.contains("timestamp")) {
+            updateClockOffset(delta_state["timestamp"].get<long long>(), request_start_ms, response_recv_ms);
+        }
         
         parseDeltaState(data["data"]["delta_state"]);
         
         return true;
+    }
+
+    /**
+    * @brief Get current local system time in milliseconds.
+     */
+    long long currentSystemTimeMs() const {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    /**
+    * @brief Update clock offset using one server timestamp sample.
+    *
+    * offset = server_timestamp - local_midpoint(request_start, response_recv)
+     */
+    void updateClockOffset(long long server_timestamp_ms,
+                           long long request_start_ms,
+                           long long response_recv_ms) {
+        if (server_timestamp_ms <= 0 || response_recv_ms < request_start_ms) {
+            return;
+        }
+
+        const int rtt_ms = static_cast<int>(response_recv_ms - request_start_ms);
+        const long long midpoint_ms = request_start_ms + (response_recv_ms - request_start_ms) / 2;
+        const long long sample_offset_ms = server_timestamp_ms - midpoint_ms;
+
+        if (!has_clock_sync_) {
+            server_clock_offset_ms_ = sample_offset_ms;
+            has_clock_sync_ = true;
+            best_clock_sync_rtt_ms_ = rtt_ms;
+            return;
+        }
+
+        if (rtt_ms < best_clock_sync_rtt_ms_) {
+            best_clock_sync_rtt_ms_ = rtt_ms;
+            server_clock_offset_ms_ = (server_clock_offset_ms_ * 60 + sample_offset_ms * 40) / 100;
+        } else {
+            server_clock_offset_ms_ = (server_clock_offset_ms_ * 85 + sample_offset_ms * 15) / 100;
+        }
+    }
+
+    /**
+    * @brief Estimate current server time in milliseconds.
+     */
+    long long estimatedServerNowMs() const {
+        const long long now_ms = currentSystemTimeMs();
+        return has_clock_sync_ ? (now_ms + server_clock_offset_ms_) : now_ms;
     }
     
     /**
@@ -853,9 +925,7 @@ private:
             return;
         }
 
-        auto now = std::chrono::system_clock::now();
-        long long now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()).count();
+        const long long now_ms = estimatedServerNowMs();
 
         long long wait_ms = next_ts - now_ms - safety_ms;
         if (wait_ms > 0) {

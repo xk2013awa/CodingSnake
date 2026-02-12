@@ -11,8 +11,9 @@ namespace snake {
  * @brief 排行榜类型
  */
 enum class LeaderboardType {
-    KILLS,
-    MAX_LENGTH
+    KD,
+    MAX_LENGTH,
+    AVG_LENGTH_PER_GAME
 };
 
 /**
@@ -105,10 +106,12 @@ public:
     bool addFood(const std::string& uid, int count);
 
     // 查询排行榜
-    std::vector<LeaderboardEntry> getTopPlayersByKills(int limit = 100,
-                                                        int offset = 0);
+    std::vector<LeaderboardEntry> getTopPlayersByKD(int limit = 100,
+                                                    int offset = 0);
     std::vector<LeaderboardEntry> getTopPlayersByMaxLength(int limit = 100,
                                                             int offset = 0);
+    std::vector<LeaderboardEntry> getTopPlayersByAvgLengthPerGame(int limit = 100,
+                                                                   int offset = 0);
     std::vector<LeaderboardEntry> getTopPlayers(LeaderboardType type,
                                                 int limit,
                                                 int offset,

@@ -137,8 +137,9 @@
         <div class="tab-body" v-else>
           <div class="leaderboard-controls">
             <select v-model="leaderboardType">
-              <option value="kills">击杀</option>
-              <option value="max_length">长度</option>
+              <option value="kd">K/D</option>
+              <option value="max_length">最大长度</option>
+              <option value="avg_length_per_game">平均每局长度</option>
             </select>
             <select v-model="leaderboardRange">
               <option value="all">全部时间</option>
@@ -162,7 +163,7 @@
                   {{ entry.name }}
                   <span v-if="entry.isMe" class="me-badge">我</span>
                 </div>
-                <div class="meta">击杀 {{ entry.kills }} | 最长 {{ entry.max_length }}</div>
+                <div class="meta">K/D {{ formatMetric(entry.kd) }} | 均长 {{ formatMetric(entry.avg_length_per_game) }} | 最长 {{ entry.max_length }}</div>
               </div>
               <span class="value">{{ leaderboardValue(entry) }}</span>
             </button>
@@ -282,7 +283,7 @@ const tooltipPos = reactive({ x: 0, y: 0 })    // 悬浮提示屏幕位置
 const cameraInited = ref(false) // 相机是否已初始化
 
 // 排行榜筛选
-const leaderboardType = ref<'kills' | 'max_length'>('kills')
+const leaderboardType = ref<'kd' | 'max_length' | 'avg_length_per_game'>('kd')
 const leaderboardRange = ref<'all' | '1h' | '24h'>('all')
 
 // 玩家列表筛选与排序
@@ -394,8 +395,18 @@ const leaderboardEntries = computed<(LeaderboardEntry & { isMe?: boolean })[]>((
   }))
 })
 
+const formatMetric = (value: number) => {
+  return Number.isFinite(value) ? value.toFixed(2) : '0.00'
+}
+
 const leaderboardValue = (entry: LeaderboardEntry) => {
-  return leaderboardType.value === 'kills' ? entry.kills : entry.max_length
+  if (leaderboardType.value === 'max_length') {
+    return entry.max_length
+  }
+  if (leaderboardType.value === 'avg_length_per_game') {
+    return formatMetric(entry.avg_length_per_game)
+  }
+  return formatMetric(entry.kd)
 }
 
 /** 查看玩家详细统计（点击排行榜条目） */

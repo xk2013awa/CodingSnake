@@ -74,7 +74,9 @@ export interface LeaderboardEntry {
 	max_length: number
 	kills: number
 	deaths: number
+	kd: number
 	games_played: number
+	avg_length_per_game: number
 	total_food: number
 	last_round: number
 	timestamp: number
@@ -82,7 +84,7 @@ export interface LeaderboardEntry {
 }
 
 export interface LeaderboardData {
-	type: 'kills' | 'max_length'
+	type: 'kd' | 'max_length' | 'avg_length_per_game'
 	limit: number
 	offset: number
 	start_time: number
@@ -93,7 +95,7 @@ export interface LeaderboardData {
 }
 
 export interface LeaderboardQuery {
-	type?: 'kills' | 'max_length'
+	type?: 'kd' | 'max_length' | 'avg_length_per_game'
 	limit?: number
 	offset?: number
 	start_time?: number
