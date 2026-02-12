@@ -286,6 +286,12 @@ const cameraInited = ref(false) // 相机是否已初始化
 const leaderboardType = ref<'kd' | 'max_length' | 'avg_length_per_game'>('kd')
 const leaderboardRange = ref<'all' | '1h' | '24h'>('all')
 
+type DisplayLeaderboardEntry = LeaderboardEntry & {
+  kd: number
+  avg_length_per_game: number
+  isMe?: boolean
+}
+
 // 玩家列表筛选与排序
 const playerSearchQuery = ref('')                                  // 玩家搜索关键词
 const playerSortBy = ref<'length' | 'name' | 'id'>('length')      // 玩家排序方式
@@ -386,11 +392,71 @@ const sortedPlayers = computed(() => {
   return withRank
 })
 
-const leaderboardEntries = computed<(LeaderboardEntry & { isMe?: boolean })[]>(() => {
+const toFiniteNumber = (value: unknown, fallback = 0) => {
+  const num = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(num) ? num : fallback
+}
+
+const getEntryKd = (entry: LeaderboardEntry) => {
+  const direct = toFiniteNumber(entry.kd, Number.NaN)
+  if (Number.isFinite(direct)) {
+    return direct
+  }
+  const kills = toFiniteNumber(entry.kills)
+  const deaths = toFiniteNumber(entry.deaths)
+  return deaths > 0 ? kills / deaths : kills
+}
+
+const getEntryAvgLength = (entry: LeaderboardEntry) => {
+  const direct = toFiniteNumber(entry.avg_length_per_game, Number.NaN)
+  if (Number.isFinite(direct)) {
+    return direct
+  }
+  const gamesPlayed = toFiniteNumber(entry.games_played)
+  const totalFood = toFiniteNumber(entry.total_food)
+  return gamesPlayed > 0 ? 3 + totalFood / gamesPlayed : 0
+}
+
+const getSortMetric = (entry: LeaderboardEntry) => {
+  if (leaderboardType.value === 'max_length') {
+    return toFiniteNumber(entry.max_length)
+  }
+  if (leaderboardType.value === 'avg_length_per_game') {
+    return getEntryAvgLength(entry)
+  }
+  return getEntryKd(entry)
+}
+
+const leaderboardEntries = computed<DisplayLeaderboardEntry[]>(() => {
   const entries = leaderboardStore.data?.entries ?? []
-  // 标记当前选择的玩家
-  return entries.map(entry => ({
+
+  const normalized = entries.map((entry) => ({
     ...entry,
+    kd: getEntryKd(entry),
+    avg_length_per_game: getEntryAvgLength(entry),
+    now_length: toFiniteNumber(entry.now_length),
+    max_length: toFiniteNumber(entry.max_length),
+    kills: toFiniteNumber(entry.kills),
+    deaths: toFiniteNumber(entry.deaths),
+    games_played: toFiniteNumber(entry.games_played),
+    total_food: toFiniteNumber(entry.total_food),
+  }))
+
+  const sorted = [...normalized].sort((a, b) => {
+    const metricDiff = getSortMetric(b) - getSortMetric(a)
+    if (metricDiff !== 0) {
+      return metricDiff
+    }
+    const maxLengthDiff = b.max_length - a.max_length
+    if (maxLengthDiff !== 0) {
+      return maxLengthDiff
+    }
+    return toFiniteNumber(a.rank) - toFiniteNumber(b.rank)
+  })
+
+  return sorted.map((entry, index) => ({
+    ...entry,
+    rank: index + 1,
     isMe: Boolean(gameStore.myPlayerId) && entry.uid === gameStore.myPlayerId,
   }))
 })
@@ -399,7 +465,7 @@ const formatMetric = (value: number) => {
   return Number.isFinite(value) ? value.toFixed(2) : '0.00'
 }
 
-const leaderboardValue = (entry: LeaderboardEntry) => {
+const leaderboardValue = (entry: DisplayLeaderboardEntry) => {
   if (leaderboardType.value === 'max_length') {
     return entry.max_length
   }
@@ -412,19 +478,27 @@ const leaderboardValue = (entry: LeaderboardEntry) => {
 /** 查看玩家详细统计（点击排行榜条目） */
 const viewLeaderboardDetail = (entry: LeaderboardEntry) => {
   // 尝试在当前玩家列表中查找该玩家
-  const player = Object.values(gameStore.players).find(p => p.id === entry.uid || p.name === entry.name)
+  const player = Object.values(gameStore.players).find(p => p.id === entry.uid)
   if (player) {
     selectedPlayerDetail.value = player
     showPlayerDetail.value = true
   } else {
+    let hash = 0
+    for (let i = 0; i < entry.uid.length; i++) {
+      hash = (hash * 31 + entry.uid.charCodeAt(i)) >>> 0
+    }
+    const hue = hash % 360
+    const fallbackColor = `hsl(${hue}, 70%, 55%)`
+    const fallbackLength = entry.now_length > 0 ? entry.now_length : Math.max(0, entry.max_length)
+
     // 如果不在当前在线玩家中，构造一个简化的Player对象用于显示统计
     selectedPlayerDetail.value = {
       id: entry.uid,
       name: entry.name,
-      color: '#888',
+      color: fallbackColor,
       head: { x: 0, y: 0 },
       blocks: [],
-      length: entry.now_length,
+      length: fallbackLength,
       invincible_rounds: 0,
     } as Player
     showPlayerDetail.value = true
@@ -476,16 +550,34 @@ const getLeaderboardStartTime = () => {
 }
 
 const refreshLeaderboard = async (force = true) => {
+  const queryBase = {
+    limit: 20,
+    offset: 0,
+    start_time: getLeaderboardStartTime(),
+  }
+
   try {
-    const query = {
-      type: leaderboardType.value,
-      limit: 20,
-      offset: 0,
-      start_time: getLeaderboardStartTime(),
+    await leaderboardStore.fetchLeaderboard(
+      {
+        ...queryBase,
+        type: leaderboardType.value,
+      },
+      force,
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (/invalid type/i.test(message) && leaderboardType.value !== 'max_length') {
+      try {
+        await leaderboardStore.fetchLeaderboard(
+          {
+            ...queryBase,
+            type: 'kills',
+          },
+          true,
+        )
+      } catch {
+      }
     }
-    await leaderboardStore.fetchLeaderboard(query, force)
-  } catch {
-    // 排行榜失败时保持静默，避免影响主流程
   }
 }
 
