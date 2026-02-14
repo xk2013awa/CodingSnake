@@ -478,9 +478,13 @@ public:
         
         try {
             while (true) {
-                // Update map state
+                // CRITICAL: Wait first, then fetch map immediately
+                // This ensures we fetch the latest state at the start of each round
+                waitForNextRoundWindow();
+                
+                // Immediately update map state after waiting
                 if (!updateMapState()) {
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     continue;
                 }
                 
@@ -499,7 +503,7 @@ public:
 
                 const int current_round = state_.getCurrentRound();
                 if (current_round == last_decision_round) {
-                    waitForNextRoundWindow();
+                    // Already processed this round, continue to next iteration
                     continue;
                 }
                 
@@ -512,9 +516,10 @@ public:
                     direction = "right";  // Default direction
                 }
                 
-                // Send move command
+                // Send move command immediately
                 if (sendMove(direction)) {
                     move_count++;
+                    last_decision_round = current_round;
                     
                     if (config_.verbose && move_count % 10 == 0) {
                         Snake my = state_.getMySnake();
@@ -522,13 +527,10 @@ public:
                             " | Length: " + std::to_string(my.length) +
                             " | Moves: " + std::to_string(move_count));
                     }
+                } else {
+                    // Mark as processed even if send failed to avoid repeated attempts
+                    last_decision_round = current_round;
                 }
-
-                // At most one decision submission per round to avoid repeated 429 errors
-                last_decision_round = current_round;
-                
-                // Align with next-round window by server timestamp to avoid sleep drift
-                waitForNextRoundWindow();
             }
         } catch (const std::exception& e) {
             log("ERROR", string("Game loop error: ") + e.what());
@@ -918,10 +920,15 @@ private:
      */
     void waitForNextRoundWindow() {
         const long long next_ts = state_.getNextRoundTimestamp();
-        const int safety_ms = 15;
+        // Increased safety margin to allow time for:
+        // - Network latency to fetch map (~10-50ms)
+        // - Decision calculation (~10-50ms)
+        // - Network latency to submit move (~10-50ms)
+        // Total: ~150ms buffer is more reliable
+        const int safety_ms = 150;
 
         if (next_ts <= 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(5, round_time_ms_ / 4)));
+            std::this_thread::sleep_for(std::chrono::milliseconds(std::max(50, round_time_ms_ / 3)));
             return;
         }
 
@@ -931,7 +938,8 @@ private:
         if (wait_ms > 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
         } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // If we're already past the target time, just yield briefly
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
     
