@@ -75,7 +75,7 @@ crow::response RouteHandler::handleLogin(const crow::request& req) {
             LOG_WARNING("Rate limit exceeded for login endpoint from IP: " + clientIp);
             const auto& rateLimitConfig = Config::getInstance().getRateLimit();
             int retryAfter = rateLimiter_.getRetryAfter("login:" + clientIp, 
-                           rateLimitConfig.loginPerHour, rateLimitConfig.loginWindowSeconds);
+                           rateLimitConfig.loginPerMinute, rateLimitConfig.loginWindowSeconds);
             return buildResponse(ResponseBuilder::tooManyRequests(
                 "too many requests, please retry after " + std::to_string(retryAfter) + " seconds", 
                 retryAfter));
@@ -601,7 +601,7 @@ bool RouteHandler::checkRateLimit(const std::string& key, const std::string& end
     else if (endpoint == "login") {
         return rateLimiter_.checkLimit(
             "login:" + key,
-            rateLimitConfig.loginPerHour,
+            rateLimitConfig.loginPerMinute,
             rateLimitConfig.loginWindowSeconds);
     }
     else if (endpoint == "join") {

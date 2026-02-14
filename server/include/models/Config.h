@@ -44,8 +44,8 @@ public:
         bool enabled = true;
         int statusPerMinute = 60;
         int statusWindowSeconds = 60;
-        int loginPerHour = 10;
-        int loginWindowSeconds = 3600;
+        int loginPerMinute = 10;
+        int loginWindowSeconds = 60;
         int joinPerMinute = 5;
         int joinWindowSeconds = 60;
         int movePerRound = 1;

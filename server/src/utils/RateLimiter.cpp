@@ -11,6 +11,10 @@ RateLimiter::~RateLimiter() {
 }
 
 bool RateLimiter::checkLimit(const std::string& key, int maxRequests, int windowSeconds) {
+    if (maxRequests <= 0 || windowSeconds <= 0) {
+        return true;
+    }
+
     std::lock_guard<std::mutex> lock(mutex_);
     
     auto now = std::chrono::system_clock::now();
@@ -36,6 +40,10 @@ bool RateLimiter::checkLimit(const std::string& key, int maxRequests, int window
 }
 
 int RateLimiter::getRetryAfter(const std::string& key, int maxRequests, int windowSeconds) const {
+    if (maxRequests <= 0 || windowSeconds <= 0) {
+        return 0;
+    }
+
     std::lock_guard<std::mutex> lock(mutex_);
     
     auto it = records_.find(key);

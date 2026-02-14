@@ -135,8 +135,11 @@ bool Config::loadFromJson(const nlohmann::json& j) {
             if (rate.contains("status_window_seconds")) {
                 rateLimit_.statusWindowSeconds = rate["status_window_seconds"].get<int>();
             }
-            if (rate.contains("login_per_hour")) {
-                rateLimit_.loginPerHour = rate["login_per_hour"].get<int>();
+            if (rate.contains("login_per_minute")) {
+                rateLimit_.loginPerMinute = rate["login_per_minute"].get<int>();
+            } else if (rate.contains("login_per_hour")) {
+                // 兼容旧配置字段
+                rateLimit_.loginPerMinute = rate["login_per_hour"].get<int>();
             }
             if (rate.contains("login_window_seconds")) {
                 rateLimit_.loginWindowSeconds = rate["login_window_seconds"].get<int>();
@@ -369,40 +372,40 @@ bool Config::validate() const {
 
     // 验证速率限制配置（允许通过 enabled 关闭限制）
     if (rateLimit_.enabled) {
-        if (rateLimit_.statusPerMinute < 1 || rateLimit_.statusPerMinute > 10000) {
-            std::cerr << "[Config] 状态查询速率限制无效: " << rateLimit_.statusPerMinute << " (应在 1-10000 之间)" << std::endl;
+        if (rateLimit_.statusPerMinute < 0 || rateLimit_.statusPerMinute > 10000) {
+            std::cerr << "[Config] 状态查询速率限制无效: " << rateLimit_.statusPerMinute << " (应在 0-10000 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.statusWindowSeconds < 1 || rateLimit_.statusWindowSeconds > 3600) {
-            std::cerr << "[Config] 状态查询窗口无效: " << rateLimit_.statusWindowSeconds << " (应在 1-3600 之间)" << std::endl;
+        if (rateLimit_.statusWindowSeconds < 0 || rateLimit_.statusWindowSeconds > 3600) {
+            std::cerr << "[Config] 状态查询窗口无效: " << rateLimit_.statusWindowSeconds << " (应在 0-3600 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.loginPerHour < 1 || rateLimit_.loginPerHour > 10000) {
-            std::cerr << "[Config] 登录速率限制无效: " << rateLimit_.loginPerHour << " (应在 1-10000 之间)" << std::endl;
+        if (rateLimit_.loginPerMinute < 0 || rateLimit_.loginPerMinute > 10000) {
+            std::cerr << "[Config] 登录速率限制无效: " << rateLimit_.loginPerMinute << " (应在 0-10000 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.loginWindowSeconds < 1 || rateLimit_.loginWindowSeconds > 86400) {
-            std::cerr << "[Config] 登录窗口无效: " << rateLimit_.loginWindowSeconds << " (应在 1-86400 之间)" << std::endl;
+        if (rateLimit_.loginWindowSeconds < 0 || rateLimit_.loginWindowSeconds > 3600) {
+            std::cerr << "[Config] 登录窗口无效: " << rateLimit_.loginWindowSeconds << " (应在 0-3600 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.joinPerMinute < 1 || rateLimit_.joinPerMinute > 10000) {
-            std::cerr << "[Config] 加入速率限制无效: " << rateLimit_.joinPerMinute << " (应在 1-10000 之间)" << std::endl;
+        if (rateLimit_.joinPerMinute < 0 || rateLimit_.joinPerMinute > 10000) {
+            std::cerr << "[Config] 加入速率限制无效: " << rateLimit_.joinPerMinute << " (应在 0-10000 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.joinWindowSeconds < 1 || rateLimit_.joinWindowSeconds > 3600) {
-            std::cerr << "[Config] 加入窗口无效: " << rateLimit_.joinWindowSeconds << " (应在 1-3600 之间)" << std::endl;
+        if (rateLimit_.joinWindowSeconds < 0 || rateLimit_.joinWindowSeconds > 3600) {
+            std::cerr << "[Config] 加入窗口无效: " << rateLimit_.joinWindowSeconds << " (应在 0-3600 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.movePerRound < 1 || rateLimit_.movePerRound > 100) {
-            std::cerr << "[Config] 移动速率限制无效: " << rateLimit_.movePerRound << " (应在 1-100 之间)" << std::endl;
+        if (rateLimit_.movePerRound < 0 || rateLimit_.movePerRound > 100) {
+            std::cerr << "[Config] 移动速率限制无效: " << rateLimit_.movePerRound << " (应在 0-100 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.mapPerSecond < 1 || rateLimit_.mapPerSecond > 10000) {
-            std::cerr << "[Config] 地图查询速率限制无效: " << rateLimit_.mapPerSecond << " (应在 1-10000 之间)" << std::endl;
+        if (rateLimit_.mapPerSecond < 0 || rateLimit_.mapPerSecond > 10000) {
+            std::cerr << "[Config] 地图查询速率限制无效: " << rateLimit_.mapPerSecond << " (应在 0-10000 之间，0表示不限制)" << std::endl;
             return false;
         }
-        if (rateLimit_.mapWindowSeconds < 1 || rateLimit_.mapWindowSeconds > 60) {
-            std::cerr << "[Config] 地图查询窗口无效: " << rateLimit_.mapWindowSeconds << " (应在 1-60 之间)" << std::endl;
+        if (rateLimit_.mapWindowSeconds < 0 || rateLimit_.mapWindowSeconds > 60) {
+            std::cerr << "[Config] 地图查询窗口无效: " << rateLimit_.mapWindowSeconds << " (应在 0-60 之间，0表示不限制)" << std::endl;
             return false;
         }
     }

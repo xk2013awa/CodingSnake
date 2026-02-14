@@ -128,10 +128,15 @@ make
     "backup_interval_hours": 6           // 备份间隔
   },
   "rate_limits": {
-    "login_per_hour": 10,     // 登录限制
-    "join_per_minute": 5,     // 加入游戏限制
-    "move_per_round": 1,      // 移动指令限制
-    "map_per_second": 10      // 地图查询限制
+    "status_per_minute": 60,   // 状态查询限制（0表示不限制）
+    "status_window_seconds": 60,
+    "login_per_minute": 60,    // 登录限制（0表示不限制）
+    "login_window_seconds": 60,
+    "join_per_minute": 0,      // 加入游戏限制（0表示不限制）
+    "join_window_seconds": 60,
+    "move_per_round": 1,       // 移动指令限制（0表示不限制）
+    "map_per_second": 10,      // 地图查询限制（0表示不限制）
+    "map_window_seconds": 1
   }
 }
 ```
