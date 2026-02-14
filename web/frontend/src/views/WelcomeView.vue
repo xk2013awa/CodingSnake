@@ -40,14 +40,14 @@
       <div class="intro-cards">
         <article class="intro-card">
           <h3>轻松上手</h3>
-          <p>几行代码即可入局，不需要配置复杂的环境，读一遍 README，5分钟内部署你的第一个 Agent。。</p>
+          <p>几行代码即可入局，不需要配置复杂的环境，读一遍 文档，用Deb-cpp就能在5分钟内部署你的第一个 Agent。。</p>
           <div class="intro-example intro-example-code syntax-code" aria-hidden="true">
             <pre><code v-html="introHighlightedCode"></code></pre>
           </div>
         </article>
         <article class="intro-card">
           <h3>算法进化</h3>
-          <p>从简单的贪心算法，到 A*，DP，博弈论策略甚至神经网络。环境在变，对手在变，你的代码也需要持续迭代。</p>
+          <p>从简单的贪心算法，到 A*，DP，博弈论策略甚至神经网络，又或是纯微操的“人工”智能。环境在变，对手在变，你的代码也需要持续迭代。</p>
           <div class="intro-example intro-example-map" aria-hidden="true">
             <canvas ref="introMapCanvasRef" class="intro-map-demo"></canvas>
           </div>

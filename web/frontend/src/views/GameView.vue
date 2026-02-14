@@ -177,6 +177,21 @@
       </aside>
     </div>
 
+    <!-- 底部栏 -->
+    <footer class="game-footer">
+      <div class="footer-content">
+        <p class="footer-text">
+          © 2026 CodingSnake. Made with <span class="footer-heart">❤</span> by seve42.
+        </p>
+        <a href="https://github.com/seve42/codingsnake" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v 3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </footer>
+
   </section>
 
   <!-- 玩家信息悬浮提示 -->
@@ -2216,6 +2231,98 @@ onBeforeUnmount(() => {
   .server-input input {
     flex: 1;
     min-width: 0;
+  }
+}
+
+/* ========== 底部栏 ========== */
+.game-footer {
+  margin-top: 24px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 100%;
+}
+
+.footer-text {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  flex: 1;
+}
+
+.footer-heart {
+  color: #ef4444;
+  margin: 0 2px;
+  display: inline-block;
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.04);
+  color: #0662f6;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.footer-link:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.github-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .footer-text {
+    font-size: 11px;
+  }
+  .footer-link {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+  .github-icon {
+    width: 12px;
+    height: 12px;
   }
 }
 </style>
