@@ -554,7 +554,25 @@ void GameManager::generateFood() {
     // 如果食物不足，生成新食物
     if (currentFoodCount < targetFoodCount) {
         int toGenerate = targetFoodCount - currentFoodCount;
-        auto newFoods = mapManager_->generateFoodFast(toGenerate, occupiedCounts_, gameState_.getFoodSet());
+
+        std::unordered_map<Point, int, PointHash> authoritativeOccupied;
+        authoritativeOccupied.reserve(occupiedCounts_.size() + 64);
+
+        for (const auto& player : gameState_.getPlayers()) {
+            if (!player || !player->isInGame()) {
+                continue;
+            }
+
+            const auto& blocks = player->getSnake().getBlocks();
+            for (const auto& block : blocks) {
+                if (!mapManager_->isValidPosition(block)) {
+                    continue;
+                }
+                authoritativeOccupied[block] += 1;
+            }
+        }
+
+        auto newFoods = mapManager_->generateFoodFast(toGenerate, authoritativeOccupied, gameState_.getFoodSet());
         
         for (const auto& food : newFoods) {
             // 追踪食物添加
@@ -564,6 +582,11 @@ void GameManager::generateFood() {
         
         if (!newFoods.empty()) {
             LOG_DEBUG("Generated " + std::to_string(newFoods.size()) + " new food(s)");
+        } else {
+            LOG_WARNING("Food generation produced 0 items | target=" + std::to_string(targetFoodCount) +
+                        ", current=" + std::to_string(currentFoodCount) +
+                        ", occupied=" + std::to_string(authoritativeOccupied.size()) +
+                        ", existing_foods=" + std::to_string(gameState_.getFoodSet().size()));
         }
     }
 }

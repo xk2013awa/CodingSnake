@@ -1,9 +1,9 @@
 {
   "server": {
     "port": 18080,
-    "threads": 4,
+    "threads": 2,
     "http_enabled": true,
-    "https_enabled": false,
+    "https_enabled": true,
     "https_port": 18443,
     "bind_address": "0.0.0.0",
     "ssl_cert_file": "./certs/server.crt",
@@ -11,12 +11,12 @@
     "ssl_use_chain_file": false
   },
   "game": {
-    "map_width": 50,
-    "map_height": 50,
+    "map_width": 100,
+    "map_height": 100,
     "round_time_ms": 250,
     "initial_snake_length": 3,
     "invincible_rounds": 5,
-    "food_density": 0.05
+    "food_density": 0.01
   },
   "database": {
     "path": "./data/snake.db",
@@ -26,12 +26,12 @@
     "backup_interval_hours": 6
   },
   "rate_limits": {
-    "enabled": false,
+    "enabled": true,
     "status_per_minute": 60,
     "status_window_seconds": 60,
-    "login_per_minute": 10,
+    "login_per_minute": 60,
     "login_window_seconds": 60,
-    "join_per_minute": 5,
+    "join_per_minute": 60,
     "join_window_seconds": 60,
     "move_per_round": 1,
     "map_per_second": 10,
